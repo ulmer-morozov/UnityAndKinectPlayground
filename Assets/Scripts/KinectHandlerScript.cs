@@ -10,6 +10,8 @@ namespace Assets.Scripts
 {
     public class KinectHandlerScript : MonoBehaviour
     {
+        public readonly IList<JointType> JointTypes;
+
         public GameObject Humanoid;
 
         public GameObject Head;
@@ -43,8 +45,6 @@ namespace Assets.Scripts
         public GameObject AnkleRight;
         public GameObject FootRight;
 
-        private GameObject[] _bodyParts;
-
         public float AdditionalRotationY = (float)Math.PI / 2;
 
 
@@ -52,92 +52,73 @@ namespace Assets.Scripts
         private BodyFrameReader _bodyFrameReader;
         private Body[] _bodies;
 
-
         private IDictionary<JointType, GameObject> _humanoidJoints;
-
+        private IDictionary<JointType, bool> _isConnected;
 
         private IDictionary<JointType, GameObject> _joints;
         private IDictionary<JointType, GameObject> _bones;
 
-        private IDictionary<GameObject, float> _initialYRotations;
-
         public const int PosK = 100;
+
+        public KinectHandlerScript()
+        {
+            //выставляем дефолтные значения
+            JointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToArray();
+        }
 
         public void Awake()
         {
+
             _joints = new Dictionary<JointType, GameObject>();
             _bones = new Dictionary<JointType, GameObject>();
-            _initialYRotations = new Dictionary<GameObject, float>();
+            _isConnected = new Dictionary<JointType, bool>();
+            _humanoidJoints = new Dictionary<JointType, GameObject>();
+
+            //инициализируем данные
+            foreach (var jointType in JointTypes)
+            {
+                _isConnected[jointType] = false;
+            }
 
             CreateJoints();
             CreateBones();
             CreateHumanoidJoints();
+        }
 
-            _bodyParts = new[]
-            {
-                //Head,
-                //Neck,
-                //Neck1,
-
-                //RightArm,
-                //RightForeArm,
-
-                //LeftArm,
-                //LeftForeArm,
-
-                //Spine,
-                //LowerBack,
-
-                //LHipJoint,
-                //LeftUpLeg,
-
-                //LeftLeg,
-                 FootLeft,
-
-                //RHipJoint,
-                //RightUpLeg,
-
-                //RightLeg,
-                //RightFoot
-            }.Where(x => x != null).ToArray();
-
-            foreach (var bodyPart in _bodyParts)
-            {
-                var rotation = bodyPart.transform.localRotation.eulerAngles.y;
-                //_initialYRotations[bodyPart] = rotation;
-
-                Debug.Log(bodyPart + " init rot: " + rotation);
-            }
+        private void BindHumanoidJoint(JointType jointType, GameObject bindedObject, bool connected = true)
+        {
+            _humanoidJoints[jointType] = bindedObject;
+            _isConnected[jointType] = connected;
         }
 
         private void CreateHumanoidJoints()
         {
-            _humanoidJoints = new Dictionary<JointType, GameObject>();
+            BindHumanoidJoint(JointType.Head, Head, connected: false);
+            BindHumanoidJoint(JointType.Neck, SpineShoulder);
 
-            _humanoidJoints[JointType.Head] = null;
-            _humanoidJoints[JointType.Neck] = SpineShoulder;
+            BindHumanoidJoint(JointType.SpineShoulder, SpineMid);
+            BindHumanoidJoint(JointType.SpineMid, SpineBase);
+            //BindHumanoidJoint(JointType.SpineBase, null);
 
-            _humanoidJoints[JointType.SpineShoulder] = SpineMid;
-            _humanoidJoints[JointType.SpineMid] = SpineBase;
-            _humanoidJoints[JointType.SpineBase] = null;
+            BindHumanoidJoint(JointType.ShoulderRight, ShoulderBaseRight);
+            BindHumanoidJoint(JointType.ElbowRight, ShoulderRight);
+            BindHumanoidJoint(JointType.WristRight, ElbowRight);
+            BindHumanoidJoint(JointType.HandRight, WristRight);
 
-            _humanoidJoints[JointType.ShoulderRight] = ShoulderBaseRight;
-            _humanoidJoints[JointType.ElbowRight] = ShoulderRight;
-            _humanoidJoints[JointType.WristRight] = ElbowRight;
-            //_humanoidJoints[JointType.HandRight] = HandRight;
+            BindHumanoidJoint(JointType.ShoulderLeft, ShoulderBaseLeft);
+            BindHumanoidJoint(JointType.ElbowLeft, ShoulderLeft);
+            BindHumanoidJoint(JointType.WristLeft, ElbowLeft);
+            BindHumanoidJoint(JointType.HandLeft, WristLeft);
 
-            _humanoidJoints[JointType.ShoulderLeft] = ShoulderBaseLeft;
-            _humanoidJoints[JointType.ElbowLeft] = ShoulderLeft;
-            _humanoidJoints[JointType.WristLeft] = ElbowLeft;
-            //_humanoidJoints[JointType.HandLeft] = HandLeft;
+            //BindHumanoidJoint(JointType.HipLeft, null);
+            BindHumanoidJoint(JointType.KneeLeft, HipLeft);
+            BindHumanoidJoint(JointType.AnkleLeft, KneeLeft);
+            BindHumanoidJoint(JointType.FootLeft, AnkleLeft, connected: false);
 
-            _humanoidJoints[JointType.HipLeft] = null;
-            _humanoidJoints[JointType.KneeLeft] = HipLeft;
-            _humanoidJoints[JointType.AnkleLeft] = KneeLeft;
-
-            _humanoidJoints[JointType.HipRight] = null;
-            _humanoidJoints[JointType.KneeRight] = HipRight;
-            _humanoidJoints[JointType.AnkleRight] = KneeRight;
+            //BindHumanoidJoint(JointType.HipRight, null);
+            BindHumanoidJoint(JointType.KneeRight, HipRight);
+            BindHumanoidJoint(JointType.AnkleRight, KneeRight);
+            BindHumanoidJoint(JointType.FootRight, AnkleRight, connected: false);
         }
 
         public void Start()
@@ -156,7 +137,7 @@ namespace Assets.Scripts
 
                 jointObject.transform.parent = gameObject.transform;
                 jointObject.name = string.Format("Joint_{0}", jointType);
-                jointObject.transform.localScale += new Vector3(18, 18, 18);
+                jointObject.transform.localScale += new Vector3(20, 20, 20);
 
                 _joints[jointType] = jointObject;
             }
@@ -164,13 +145,12 @@ namespace Assets.Scripts
 
         private void CreateBones()
         {
-            foreach (JointType jointType in Enum.GetValues(typeof(JointType)))
+            foreach (var jointType in JointTypes)
             {
-                var boneObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                var boneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 
                 boneObject.transform.parent = gameObject.transform;
                 boneObject.name = string.Format("Bone_{0}", jointType);
-                boneObject.transform.localScale += new Vector3(1, 10, 1);
 
                 _bones[jointType] = boneObject;
             }
@@ -209,13 +189,9 @@ namespace Assets.Scripts
                 if (_bodies == null)
                     _bodies = new Body[bodyFrame.BodyCount];
 
-                // The first time GetAndRefreshBodyData is called, Kinect will allocate each Body in the array.
-                // As long as those body objects are not disposed and not set to null in the array,
-                // those body objects will be re-used.
                 bodyFrame.GetAndRefreshBodyData(_bodies);
 
                 var trackedBodies = _bodies.Where(x => x.IsTracked).ToArray();
-
                 if (!trackedBodies.Any())
                     return;
 
@@ -242,6 +218,10 @@ namespace Assets.Scripts
                 var jointObject = kvPair.Value;
 
                 if (jointObject == null)
+                    continue;
+
+                //синхронизация части тела выключена
+                if (!_isConnected[jointType])
                     continue;
 
                 var rotationKinSys = body.JointOrientations[jointType].Orientation.ToUnity();
@@ -282,33 +262,23 @@ namespace Assets.Scripts
         private void DrawJoints(Body body)
         {
             //обрисовывем нашего человечка
-            foreach (var joint in body.Joints.Values)
+            foreach (var jointType in JointTypes)
             {
-                if (!_humanoidJoints.ContainsKey(joint.JointType))
+                if (!_humanoidJoints.ContainsKey(jointType))
                     continue;
 
-                var humanoidPart = _humanoidJoints[joint.JointType];
+                if (jointType == JointType.Head)
+                    Debug.Log("hEad!");
+
+                var humanoidPart = _humanoidJoints[jointType];
                 if (humanoidPart == null)
                     continue;
 
-                var jointObject = _joints[joint.JointType];
+                var jointObject = _joints[jointType];
 
                 jointObject.transform.position = humanoidPart.transform.position;
                 jointObject.transform.rotation = humanoidPart.transform.rotation;
             }
-
-            //рисуем скелет в пространстве
-            //foreach (var joint in body.Joints.Values)
-            //{
-            //    var jointPos = joint.Position;
-            //    var jointObject = _joints[joint.JointType];
-
-            //    jointObject.transform.localPosition = new Vector3(jointPos.X, jointPos.Y, jointPos.Z);
-            //    jointObject.transform.localPosition *= PosK;
-
-            //    var jointQuadrion = body.JointOrientations[joint.JointType].Orientation.ToUnity();
-            //    jointObject.transform.rotation = jointQuadrion;
-            //}
         }
 
         private void DrawBones(Body body)
@@ -316,129 +286,74 @@ namespace Assets.Scripts
             Tuple[] pairs =
             {
                 //new Tuple(JointType.Head, JointType.Neck, Head,false),
-                //new Tuple(JointType.SpineShoulder, JointType.Neck, Neck, false),
+                new Tuple(JointType.SpineShoulder, JointType.Neck, Neck, false),
 
-                //new Tuple(JointType.SpineMid, JointType.SpineShoulder, SpineMid, false),
+                new Tuple(JointType.SpineMid, JointType.SpineShoulder, SpineMid, false),
                 //new Tuple(JointType.SpineBase, JointType.SpineMid, SpineBase, false),
 
-                //new Tuple(JointType.ShoulderRight, JointType.ElbowRight, RightArm, false),
-                //new Tuple(JointType.ElbowRight, JointType.HandRight, RightForeArm, false),
+                new Tuple(JointType.ShoulderRight, JointType.ElbowRight, ShoulderRight, false),
+                new Tuple(JointType.ElbowRight, JointType.WristRight, ElbowRight, false),
+                new Tuple(JointType.WristRight, JointType.HandRight, WristRight, false),
 
-                //new Tuple(JointType.ShoulderLeft, JointType.ElbowLeft, LeftArm, false),
-                //new Tuple(JointType.ElbowLeft, JointType.HandLeft, LeftForeArm, false),
+                new Tuple(JointType.ShoulderLeft, JointType.ElbowLeft, ShoulderLeft, false),
+                new Tuple(JointType.ElbowLeft, JointType.WristLeft, ElbowLeft, false),
+                new Tuple(JointType.WristLeft, JointType.HandLeft, WristLeft, false),
 
-                //new Tuple(JointType.SpineBase, JointType.HipLeft, LHipJoint, false),
-                //new Tuple(JointType.HipLeft, JointType.KneeLeft, LeftUpLeg, false),
+                new Tuple(JointType.SpineBase, JointType.HipLeft, SpineBase, false),
+                //new Tuple(JointType.HipLeft, JointType.KneeLeft, HipLeft, false),
 
-                //new Tuple(JointType.KneeLeft, JointType.AnkleLeft, LeftLeg, false),
-                //new Tuple(JointType.AnkleLeft, JointType.FootLeft, LeftFoot, true),
+                new Tuple(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft, false),
+                new Tuple(JointType.AnkleLeft, JointType.FootLeft, FootLeft, true),
 
-                //new Tuple(JointType.SpineBase, JointType.HipRight, RHipJoint, false),
-                //new Tuple(JointType.HipRight, JointType.KneeRight, RightUpLeg, false),
+                //new Tuple(JointType.SpineBase, JointType.HipRight, SpineBase, false),
+                //new Tuple(JointType.HipRight, JointType.KneeRight, HipLeft, false),
 
-                //new Tuple(JointType.KneeRight, JointType.AnkleRight, RightLeg, false),
-                //new Tuple(JointType.AnkleRight, JointType.FootRight, RightFoot, true),
+                new Tuple(JointType.KneeRight, JointType.AnkleRight, KneeRight, false),
+                new Tuple(JointType.AnkleRight, JointType.FootRight, FootRight, true),
             };
 
             foreach (var tuple in pairs)
             {
-                DrawBone(body, tuple.First, tuple.Second, tuple.Third, tuple.UseCustomRotation);
+                DrawBone(body, tuple.First, tuple.Second);
             }
         }
 
-        private void DrawBone(Body body, JointType startJointType, JointType endJointType, GameObject relatedGameObject, bool useCustomRotation)
+        private void DrawBone(Body body, JointType startJointType, JointType endJointType)
         {
-            const float boneWidthScale = 5;
+            const float boneWidthScale = 20;
 
-            var jointOrientation = body.JointOrientations[endJointType];
+            if (
+                !_joints.ContainsKey(startJointType)
+                ||
+                !_joints.ContainsKey(endJointType)
+                ||
+                !body.JointOrientations.ContainsKey(endJointType)
+                ||
+                !_bones.ContainsKey(endJointType)
+            )
+            {
+                return;
+            }
+
             var boneObject = _bones[endJointType];
 
-            var startJoint = body.Joints[startJointType];
-            var endJoint = body.Joints[endJointType];
+            var startJoint = _joints[startJointType];
+            var endJoint = _joints[endJointType];
 
-            var startJointPos = startJoint.Position.ToUnity() * PosK;
-            var endJointPos = endJoint.Position.ToUnity() * PosK;
+            if (startJoint == null || endJoint == null)
+                return;
+
+            var startJointPos = startJoint.transform.position;
+            var endJointPos = endJoint.transform.position;
 
             var boneLength = Vector3.Distance(startJointPos, endJointPos);
-            boneObject.transform.localScale = new Vector3(boneWidthScale, boneLength, boneWidthScale * 2);
+            boneObject.transform.localScale = new Vector3(boneWidthScale, boneLength / 2, boneWidthScale);
 
-            //var boneVector = jointOrientation.Orientation.ToUnity() * Vector3.up;
-            //boneVector.Set(-boneVector.x, boneVector.y, boneVector.z);
-            //var normalVector = jointOrientation.Orientation.ToUnity() * Vector3.forward;
-            //var rot = Quaternion.FromToRotation(Vector3.up, boneVector);
-            //var reverseRot = Quaternion.FromToRotation(boneVector, Vector3.up);
-
-            //boneObject.transform.LookAt(normalVector);
-
-            //Quaternion
-
-
-            //Vector3 boneVector;//= endJointPos - startJointPos;
-
-            //boneVector = jointOrientation.Orientation.ToUnity() * Vector3.up;
-            //var normalVector = jointOrientation.Orientation.ToUnity() * Vector3.forward;
-
-            Quaternion rotationKinSys;
-            Quaternion rotationUnitySys;
-
-            if (useCustomRotation)
-            {
-                var boneVector = endJointPos - startJointPos;
-
-
-                //if (relatedGameObject == RightFoot)
-                //{
-                //    boneVector=new Vector3(boneVector.x*0, boneVector.y*0, boneVector.z * 1);
-                //}
-
-
-                rotationKinSys = Quaternion.FromToRotation(Vector3.up, boneVector);
-
-
-
-
-            }
-            else
-            {
-                rotationKinSys = jointOrientation.Orientation.ToUnity();
-            }
-
-            rotationUnitySys = new Quaternion
-             (
-                 rotationKinSys.x,
-                 -rotationKinSys.y,
-                 -rotationKinSys.z,
-                 rotationKinSys.w
-             ); ;
-
+            var boneVector = endJointPos - startJointPos;
+            var rotationKinSys = Quaternion.FromToRotation(Vector3.up, boneVector);
 
             boneObject.transform.rotation = rotationKinSys;
-            boneObject.transform.localPosition = startJointPos + (endJointPos - startJointPos) / 2;
-
-            if (relatedGameObject != null)
-            {
-                var humanoidRotation = new Quaternion();
-
-                if (Humanoid != null)
-                {
-                    humanoidRotation = Humanoid.transform.rotation;
-                }
-
-                relatedGameObject.transform.rotation = rotationUnitySys * humanoidRotation;
-
-                if (_initialYRotations.ContainsKey(relatedGameObject))
-                {
-                    var localYRotation = AdditionalRotationY;//_initialYRotations[relatedGameObject];
-                    var currentAngles = relatedGameObject.transform.localEulerAngles;
-
-                    relatedGameObject.transform.localEulerAngles = new Vector3(currentAngles.x - localYRotation, currentAngles.y, currentAngles.z);
-
-                }
-
-
-
-
-            }
+            boneObject.transform.position = startJointPos + (endJointPos - startJointPos) / 2;
         }
 
 
