@@ -1,0 +1,174 @@
+fileFormatVersion: 2
+guid: 15f893eaaf9a4244cb068df2c8767902
+timeCreated: 1484320806
+licenseType: Free
+ModelImporter:
+  serializedVersion: 19
+  fileIDToRecycleName:
+    100000: AnkleLeft
+    100002: AnkleRight
+    100004: ElbowLeft
+    100006: ElbowRight
+    100008: eyebrow008Mesh
+    100010: //RootNode
+    100012: fedoraFBXASC045eyebrow008
+    100014: fedoraFBXASC045female_sportsuit01
+    100016: fedoraFBXASC045highpolyeyes
+    100018: fedoraFBXASC045ponytail01
+    100020: fedoraFBXASC045shoes05
+    100022: fedoraMesh
+    100024: female_sportsuit01Mesh
+    100026: FootLeft
+    100028: FootRight
+    100030: HandLeft
+    100032: HandRight
+    100034: Head
+    100036: highFBXASC045polyMesh
+    100038: HipLeft
+    100040: HipRight
+    100042: KneeLeft
+    100044: KneeRight
+    100046: Neck
+    100048: ponytail01Mesh
+    100050: shoes05Mesh
+    100052: ShoulderBaseLeft
+    100054: ShoulderBaseRight
+    100056: ShoulderLeft
+    100058: ShoulderRight
+    100060: Skeleton_Reference
+    100062: SpineBase
+    100064: SpineMid
+    100066: SpineShoulder
+    100068: ThumbLeft
+    100070: ThumbRight
+    100072: WristLeft
+    100074: WristRight
+    400000: AnkleLeft
+    400002: AnkleRight
+    400004: ElbowLeft
+    400006: ElbowRight
+    400008: eyebrow008Mesh
+    400010: //RootNode
+    400012: fedoraFBXASC045eyebrow008
+    400014: fedoraFBXASC045female_sportsuit01
+    400016: fedoraFBXASC045highpolyeyes
+    400018: fedoraFBXASC045ponytail01
+    400020: fedoraFBXASC045shoes05
+    400022: fedoraMesh
+    400024: female_sportsuit01Mesh
+    400026: FootLeft
+    400028: FootRight
+    400030: HandLeft
+    400032: HandRight
+    400034: Head
+    400036: highFBXASC045polyMesh
+    400038: HipLeft
+    400040: HipRight
+    400042: KneeLeft
+    400044: KneeRight
+    400046: Neck
+    400048: ponytail01Mesh
+    400050: shoes05Mesh
+    400052: ShoulderBaseLeft
+    400054: ShoulderBaseRight
+    400056: ShoulderLeft
+    400058: ShoulderRight
+    400060: Skeleton_Reference
+    400062: SpineBase
+    400064: SpineMid
+    400066: SpineShoulder
+    400068: ThumbLeft
+    400070: ThumbRight
+    400072: WristLeft
+    400074: WristRight
+    4300000: fedoraFBXASC045ponytail01
+    4300002: fedoraFBXASC045highpolyeyes
+    4300004: fedoraFBXASC045eyebrow008
+    4300006: fedoraFBXASC045female_sportsuit01
+    4300008: fedoraFBXASC045shoes05
+    4300010: fedoraMesh
+    4300012: ponytail01Mesh
+    4300014: highFBXASC045polyMesh
+    4300016: eyebrow008Mesh
+    4300018: female_sportsuit01Mesh
+    4300020: shoes05Mesh
+    9500000: //RootNode
+    13700000: eyebrow008Mesh
+    13700002: fedoraFBXASC045eyebrow008
+    13700004: fedoraFBXASC045female_sportsuit01
+    13700006: fedoraFBXASC045highpolyeyes
+    13700008: fedoraFBXASC045ponytail01
+    13700010: fedoraFBXASC045shoes05
+    13700012: fedoraMesh
+    13700014: female_sportsuit01Mesh
+    13700016: highFBXASC045polyMesh
+    13700018: ponytail01Mesh
+    13700020: shoes05Mesh
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importBlendShapes: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
