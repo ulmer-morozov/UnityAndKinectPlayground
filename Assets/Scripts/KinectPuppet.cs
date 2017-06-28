@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Windows.Kinect;
 using Assets.Scripts.Helpers;
-using Assets.Scripts.Helpers.Extensions;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public class KinectHandlerScript : MonoBehaviour
+    public class KinectPuppet : MonoBehaviour, IKinectRotationDataReciever
     {
-        public readonly IList<JointType> JointTypes;
-
         public GameObject Humanoid;
 
         public GameObject Head;
@@ -45,44 +42,44 @@ namespace Assets.Scripts
         public GameObject AnkleRight;
         public GameObject FootRight;
 
-        public float AdditionalRotationY = (float)Math.PI / 2;
-
-
-        private KinectSensor _kinectSensor;
-        private BodyFrameReader _bodyFrameReader;
-        private Body[] _bodies;
-
         private IDictionary<JointType, GameObject> _humanoidJoints;
         private IDictionary<JointType, bool> _isConnected;
 
         private IDictionary<JointType, GameObject> _joints;
         private IDictionary<JointType, GameObject> _bones;
 
-        public const int PosK = 100;
-
-        public KinectHandlerScript()
-        {
-            //выставляем дефолтные значения
-            JointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToArray();
-        }
-
         public void Awake()
         {
-
             _joints = new Dictionary<JointType, GameObject>();
             _bones = new Dictionary<JointType, GameObject>();
             _isConnected = new Dictionary<JointType, bool>();
             _humanoidJoints = new Dictionary<JointType, GameObject>();
 
             //инициализируем данные
-            foreach (var jointType in JointTypes)
+            foreach (var jointType in JointTypes.All)
             {
                 _isConnected[jointType] = false;
             }
+        }
 
+        public void Start()
+        {
+            //Debug.Log("Start");
+            AttachToKinect();
             CreateJoints();
             CreateBones();
             CreateHumanoidJoints();
+        }
+
+        private void AttachToKinect()
+        {
+            Debug.Log("try attach to kinect server");
+            var kinectSerer = GetComponent<KinectBodyServer>();
+            if (kinectSerer == null)
+                return;
+
+            kinectSerer.RegisterReciever(this);
+            Debug.Log("reciever attached");
         }
 
         private void BindHumanoidJoint(JointType jointType, GameObject bindedObject, bool connected = true)
@@ -121,10 +118,16 @@ namespace Assets.Scripts
             BindHumanoidJoint(JointType.FootRight, AnkleRight, connected: false);
         }
 
-        public void Start()
+        public void UpdatePuppet(KinectData data)
         {
-            Debug.Log("Start");
-            InitializeKinect();
+            var rotationData = data.RotationDataArray.FirstOrDefault(x => !x.IsEmpty);
+            if (rotationData == null)
+                return;
+
+            //Debug.Log("update puppet");
+            RotateHumanoid(rotationData);
+            DrawJoints();
+            DrawBones();
         }
 
         #region Helpers
@@ -145,7 +148,7 @@ namespace Assets.Scripts
 
         private void CreateBones()
         {
-            foreach (var jointType in JointTypes)
+            foreach (var jointType in JointTypes.All)
             {
                 var boneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 
@@ -156,55 +159,7 @@ namespace Assets.Scripts
             }
         }
 
-        private void InitializeKinect()
-        {
-            _kinectSensor = KinectSensor.GetDefault();
-
-            // get the depth (display) extents
-            var frameDescription = _kinectSensor.DepthFrameSource.FrameDescription;
-
-            // get size of joint space
-            var displayWidth = frameDescription.Width;
-            var displayHeight = frameDescription.Height;
-
-            // open the reader for the body frames
-            _bodyFrameReader = _kinectSensor.BodyFrameSource.OpenReader();
-            _bodyFrameReader.FrameArrived += Kinect_FrameArrived;
-
-            // set IsAvailableChanged event notifier
-            //this.kinectSensor.IsAvailableChanged += Sensor_IsAvailableChanged;
-
-            // open the sensor
-            _kinectSensor.Open();
-            Debug.Log(string.Format("Kinect Started {0} x {1}", displayWidth, displayHeight));
-        }
-
-        private void Kinect_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
-        {
-            using (var bodyFrame = e.FrameReference.AcquireFrame())
-            {
-                if (bodyFrame == null)
-                    return;
-
-                if (_bodies == null)
-                    _bodies = new Body[bodyFrame.BodyCount];
-
-                bodyFrame.GetAndRefreshBodyData(_bodies);
-
-                var trackedBodies = _bodies.Where(x => x.IsTracked).ToArray();
-                if (!trackedBodies.Any())
-                    return;
-
-                var body = trackedBodies.First();
-
-                DrawJoints(body);
-                DrawBones(body);
-
-                RotateHumanoid(body);
-            }
-        }
-
-        private void RotateHumanoid(Body body)
+        private void RotateHumanoid(KinectBodyRotationData rotationData)
         {
             if (Humanoid == null)
             {
@@ -224,64 +179,39 @@ namespace Assets.Scripts
                 if (!_isConnected[jointType])
                     continue;
 
-                var rotationKinSys = body.JointOrientations[jointType].Orientation.ToUnity();
-
-                var rotationUnitySys = new Quaternion
-                (
-                    rotationKinSys.x,
-                    -rotationKinSys.y,
-                    -rotationKinSys.z,
-                    rotationKinSys.w
-                );
-
+                var rotationUnitySys = rotationData.JointOrientations[jointType];
                 var humanoidRotation = Humanoid.transform.rotation;
-                //var inversedHumanoidRotation = Quaternion.Inverse(humanoidRotation);
 
-                Quaternion addRot;
-
-                switch (jointType)
-                {
-                    case JointType.WristLeft:
-                        addRot = Quaternion.Euler(0, 90, 0);
-                        break;
-
-                    case JointType.WristRight:
-                        addRot = Quaternion.Euler(0, -90, 0);
-                        break;
-
-                    default:
-                        addRot = Quaternion.Euler(0, 0, 0);
-                        break;
-                }
-
-                jointObject.transform.rotation = humanoidRotation * rotationUnitySys * addRot;
-
+                jointObject.transform.rotation = humanoidRotation * rotationUnitySys;
             }
         }
 
-        private void DrawJoints(Body body)
+        private void DrawJoints()
         {
             //обрисовывем нашего человечка
-            foreach (var jointType in JointTypes)
+            foreach (var jointType in JointTypes.All)
             {
+                var jointObject = _joints[jointType];
+
                 if (!_humanoidJoints.ContainsKey(jointType))
+                {
+                    jointObject.SetActive(false);
                     continue;
-
-                if (jointType == JointType.Head)
-                    Debug.Log("hEad!");
-
+                }
+                
                 var humanoidPart = _humanoidJoints[jointType];
                 if (humanoidPart == null)
+                {
+                    jointObject.SetActive(false);
                     continue;
-
-                var jointObject = _joints[jointType];
+                }
 
                 jointObject.transform.position = humanoidPart.transform.position;
                 jointObject.transform.rotation = humanoidPart.transform.rotation;
             }
         }
 
-        private void DrawBones(Body body)
+        private void DrawBones()
         {
             Tuple[] pairs =
             {
@@ -314,11 +244,11 @@ namespace Assets.Scripts
 
             foreach (var tuple in pairs)
             {
-                DrawBone(body, tuple.First, tuple.Second);
+                DrawBone(tuple.First, tuple.Second);
             }
         }
 
-        private void DrawBone(Body body, JointType startJointType, JointType endJointType)
+        private void DrawBone(JointType startJointType, JointType endJointType)
         {
             const float boneWidthScale = 20;
 
@@ -326,8 +256,6 @@ namespace Assets.Scripts
                 !_joints.ContainsKey(startJointType)
                 ||
                 !_joints.ContainsKey(endJointType)
-                ||
-                !body.JointOrientations.ContainsKey(endJointType)
                 ||
                 !_bones.ContainsKey(endJointType)
             )
@@ -355,8 +283,6 @@ namespace Assets.Scripts
             boneObject.transform.rotation = rotationKinSys;
             boneObject.transform.position = startJointPos + (endJointPos - startJointPos) / 2;
         }
-
-
 
         #endregion
     }

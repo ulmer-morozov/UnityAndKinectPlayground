@@ -1,140 +1,182 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using Windows.Kinect;
-//using Assets.Scripts.Helpers;
-//using Assets.Scripts.Helpers.Extensions;
-//using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Windows.Kinect;
+using Assets.Scripts.Helpers.Extensions;
+using UnityEngine;
 
-//namespace Assets.Scripts
-//{
-//    public class KinectBodyServer : MonoBehaviour
-//    {
-//        public readonly IList<JointType> JointTypes;
-//        public float AdditionalRotationY = (float)Math.PI / 2;
+namespace Assets.Scripts
+{
+    public class KinectBodyServer : MonoBehaviour
+    {
+        private static KinectData _kinectData;
+        private static IList<Body> _bodies;
 
+        private static KinectSensor _kinectSensor;
+        private static BodyFrameReader _bodyFrameReader;
+        private static IList<IKinectRotationDataReciever> _recievers;
 
-//        private KinectSensor _kinectSensor;
-//        private BodyFrameReader _bodyFrameReader;
-//        private Body[] _bodies;
+        public void Awake()
+        {
+            Debug.Log("Awake KinectBodyServer");
+            InitializeData();
+        }
 
-//        public KinectBodyServer()
-//        {
-//            //выставляем дефолтные значения
-//            JointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToArray();
-//        }
+        public void Start()
+        {
+            Debug.Log("Start KinectBodyServer");
+            InitializeKinect();
+        }
 
-//        public void Start()
-//        {
-//            Debug.Log("Start");
-//            InitializeKinect();
-//        }
+        public void RegisterReciever(IKinectRotationDataReciever reciever)
+        {
+            if (_recievers.Contains(reciever))
+                return;
 
-//        #region Helpers
+            _recievers.Add(reciever);
+        }
 
-//        private void InitializeKinect()
-//        {
-//            _kinectSensor = KinectSensor.GetDefault();
+        #region Helpers
 
-//            // get the depth (display) extents
-//            var frameDescription = _kinectSensor.DepthFrameSource.FrameDescription;
+        private static void InitializeData()
+        {
+            if (_kinectData == null)
+            {
+                _kinectData = new KinectData();
+            }
 
-//            // get size of joint space
-//            var displayWidth = frameDescription.Width;
-//            var displayHeight = frameDescription.Height;
+            if (_recievers == null)
+            {
+                _recievers = new List<IKinectRotationDataReciever>();
+            }
+        }
 
-//            // open the reader for the body frames
-//            _bodyFrameReader = _kinectSensor.BodyFrameSource.OpenReader();
-//            _bodyFrameReader.FrameArrived += Kinect_FrameArrived;
+        private static void InitializeKinect()
+        {
+            //if (_kinectSensor != null)
+            //    return;
 
-//            // set IsAvailableChanged event notifier
-//            //this.kinectSensor.IsAvailableChanged += Sensor_IsAvailableChanged;
+            Debug.Log("InitializeKinect");
 
-//            // open the sensor
-//            _kinectSensor.Open();
-//            Debug.Log(string.Format("Kinect Started {0} x {1}", displayWidth, displayHeight));
-//        }
+            _kinectSensor = KinectSensor.GetDefault();
 
-//        private void Kinect_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
-//        {
-//            using (var bodyFrame = e.FrameReference.AcquireFrame())
-//            {
-//                if (bodyFrame == null)
-//                    return;
+            // get the depth (display) extents
+            var frameDescription = _kinectSensor.DepthFrameSource.FrameDescription;
 
-//                if (_bodies == null)
-//                    _bodies = new Body[bodyFrame.BodyCount];
+            // get size of joint space
+            var displayWidth = frameDescription.Width;
+            var displayHeight = frameDescription.Height;
 
-//                bodyFrame.GetAndRefreshBodyData(_bodies);
+            // open the reader for the body frames
+            _bodyFrameReader = _kinectSensor.BodyFrameSource.OpenReader();
+            _bodyFrameReader.FrameArrived += Kinect_FrameArrived;
 
-//                var trackedBodies = _bodies.Where(x => x.IsTracked).ToArray();
-//                if (!trackedBodies.Any())
-//                    return;
+            // set IsAvailableChanged event notifier
+            //this.kinectSensor.IsAvailableChanged += Sensor_IsAvailableChanged;
 
-//                var body = trackedBodies.First();
+            // open the sensor
+            _kinectSensor.Open();
+            Debug.Log(string.Format("Kinect Started {0} x {1}", displayWidth, displayHeight));
+        }
 
-//                DrawJoints(body);
-//                DrawBones(body);
+        private static void Kinect_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
+        {
+            //Debug.Log(string.Format("Kinect_FrameArrived e {0}", e));
+            using (var bodyFrame = e.FrameReference.AcquireFrame())
+            {
+                if (bodyFrame == null)
+                {
+                    //Debug.Log("bodyFrame == null");
+                    return;
+                }
 
-//                RotateHumanoid(body);
-//            }
-//        }
+                if (_bodies == null)
+                    _bodies = new Body[bodyFrame.BodyCount];
 
-//        private void RotateHumanoid(Body body)
-//        {
-//            if (Humanoid == null)
-//            {
-//                Debug.Log("Humanoid not set!");
-//                return;
-//            }
+                if (_kinectData.RotationDataArray == null)
+                    _kinectData.RotationDataArray = new KinectBodyRotationData[bodyFrame.BodyCount];
 
-//            foreach (var kvPair in _humanoidJoints)
-//            {
-//                var jointType = kvPair.Key;
-//                var jointObject = kvPair.Value;
+                bodyFrame.GetAndRefreshBodyData(_bodies);
+                _bodies = _bodies.OrderByDescending(x => x.IsTracked).ToArray();
 
-//                if (jointObject == null)
-//                    continue;
+                var anyTrackedBody = false;
 
-//                //синхронизация части тела выключена
-//                if (!_isConnected[jointType])
-//                    continue;
+                for (var i = 0; i < _bodies.Count; i++)
+                {
+                    var body = _bodies[i];
 
-//                var rotationKinSys = body.JointOrientations[jointType].Orientation.ToUnity();
+                    if (_kinectData.RotationDataArray[i] == null)
+                        _kinectData.RotationDataArray[i] = new KinectBodyRotationData();
 
-//                var rotationUnitySys = new Quaternion
-//                (
-//                    rotationKinSys.x,
-//                    -rotationKinSys.y,
-//                    -rotationKinSys.z,
-//                    rotationKinSys.w
-//                );
+                    var rotationData = _kinectData.RotationDataArray[i];
 
-//                var humanoidRotation = Humanoid.transform.rotation;
-//                //var inversedHumanoidRotation = Quaternion.Inverse(humanoidRotation);
+                    if (body == null)
+                    {
+                        //Debug.Log(string.Format("body {0} is NULL", i));
+                        continue;
+                    }
 
-//                Quaternion addRot;
+                    //Debug.Log(string.Format("body {0} IsTracked = {1}", i, body.IsTracked));
+                    if (!body.IsTracked)
+                    {
+                        rotationData.Clear();
+                        continue;
+                    }
+                    anyTrackedBody = true;
+                    SetRotationData(body, rotationData);
+                }
 
-//                switch (jointType)
-//                {
-//                    case JointType.WristLeft:
-//                        addRot = Quaternion.Euler(0, 90, 0);
-//                        break;
+                if (!anyTrackedBody)
+                    return;
 
-//                    case JointType.WristRight:
-//                        addRot = Quaternion.Euler(0, -90, 0);
-//                        break;
+                SendDataToRecievers();
+            }
+        }
 
-//                    default:
-//                        addRot = Quaternion.Euler(0, 0, 0);
-//                        break;
-//                }
+        private static void SendDataToRecievers()
+        {
+            foreach (var reciever in _recievers)
+            {
+                reciever.UpdatePuppet(_kinectData);
+            }
+        }
 
-//                jointObject.transform.rotation = humanoidRotation * rotationUnitySys * addRot;
+        private static void SetRotationData(Body body, KinectBodyRotationData data)
+        {
+            foreach (var jointType in JointTypes.All)
+            {
+                var rotationKinSys = body.JointOrientations[jointType].Orientation.ToUnity();
 
-//            }
-//        }
+                var rotationUnitySys = new Quaternion
+                (
+                    rotationKinSys.x,
+                    -rotationKinSys.y,
+                    -rotationKinSys.z,
+                    rotationKinSys.w
+                );
 
-//        #endregion
-//    }
-//}
+                Quaternion addRot;
+
+                // ReSharper disable once SwitchStatementMissingSomeCases
+                switch (jointType)
+                {
+                    case JointType.WristLeft:
+                        addRot = Quaternion.Euler(0, 90, 0);
+                        break;
+
+                    case JointType.WristRight:
+                        addRot = Quaternion.Euler(0, -90, 0);
+                        break;
+
+                    default:
+                        addRot = Quaternion.Euler(0, 0, 0);
+                        break;
+                }
+
+                var resultRotation = rotationUnitySys * addRot;
+                data.Set(jointType, resultRotation);
+            }
+        }
+
+        #endregion
+    }
+}
