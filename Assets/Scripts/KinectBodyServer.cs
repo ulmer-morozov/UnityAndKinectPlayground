@@ -17,7 +17,6 @@ namespace Assets.Scripts
 
         public void Awake()
         {
-            Debug.Log("Awake KinectBodyServer");
             InitializeData();
         }
 
@@ -52,8 +51,8 @@ namespace Assets.Scripts
 
         private static void InitializeKinect()
         {
-            //if (_kinectSensor != null)
-            //    return;
+            if (_kinectSensor != null)
+                return;
 
             Debug.Log("InitializeKinect");
 
