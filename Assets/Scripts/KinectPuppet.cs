@@ -42,24 +42,26 @@ namespace Assets.Scripts
         public GameObject AnkleRight;
         public GameObject FootRight;
 
-        private IDictionary<JointType, GameObject> _humanoidJoints;
-        private IDictionary<JointType, bool> _isConnected;
+        private readonly IDictionary<JointType, GameObject> _humanoidJoints;
+        private readonly IDictionary<JointType, bool> _isConnected;
 
-        private IDictionary<JointType, GameObject> _joints;
-        private IDictionary<JointType, GameObject> _bones;
+        private readonly IDictionary<JointType, GameObject> _joints;
+        private readonly IDictionary<JointType, IDictionary<JointType, GameObject>> _bones;
+
+        private BoneRelation[] _boneRelations;
+
+        public KinectPuppet()
+        {
+            _joints = new Dictionary<JointType, GameObject>();
+            _bones = new Dictionary<JointType, IDictionary<JointType, GameObject>>();
+            _isConnected = new Dictionary<JointType, bool>();
+            _humanoidJoints = new Dictionary<JointType, GameObject>();
+        }
 
         public void Awake()
         {
-            _joints = new Dictionary<JointType, GameObject>();
-            _bones = new Dictionary<JointType, GameObject>();
-            _isConnected = new Dictionary<JointType, bool>();
-            _humanoidJoints = new Dictionary<JointType, GameObject>();
-
-            //инициализируем данные
-            foreach (var jointType in JointTypes.All)
-            {
-                _isConnected[jointType] = false;
-            }
+            UpdateBoneRelations();
+            ClearSkeletonSynchronization();
         }
 
         public void Start()
@@ -70,22 +72,27 @@ namespace Assets.Scripts
             CreateBones();
             CreateHumanoidJoints();
         }
-
-        private void AttachToKinect()
+        
+        public void UpdatePuppet(KinectData data)
         {
-            Debug.Log("try attach to kinect server");
-            var kinectSerer = GetComponent<KinectBodyServer>();
-            if (kinectSerer == null)
+            var rotationData = data.RotationDataArray.FirstOrDefault(x => !x.IsEmpty);
+            if (rotationData == null)
                 return;
 
-            kinectSerer.RegisterReciever(this);
-            Debug.Log("reciever attached");
+            //Debug.Log("update puppet");
+            RotateHumanoid(rotationData);
+            DrawJoints();
+            DrawBones();
         }
 
-        private void BindHumanoidJoint(JointType jointType, GameObject bindedObject, bool connected = true)
+        #region defaults
+
+        private void ClearSkeletonSynchronization()
         {
-            _humanoidJoints[jointType] = bindedObject;
-            _isConnected[jointType] = connected;
+            foreach (var jointType in JointTypes.All)
+            {
+                _isConnected[jointType] = false;
+            }
         }
 
         private void CreateHumanoidJoints()
@@ -118,19 +125,59 @@ namespace Assets.Scripts
             BindHumanoidJoint(JointType.FootRight, AnkleRight, connected: false);
         }
 
-        public void UpdatePuppet(KinectData data)
+        private void UpdateBoneRelations()
         {
-            var rotationData = data.RotationDataArray.FirstOrDefault(x => !x.IsEmpty);
-            if (rotationData == null)
-                return;
+            _boneRelations = new[]
+            {
+                //new Tuple(JointType.Head, JointType.Neck, Head,false),
+                new BoneRelation(JointType.SpineShoulder, JointType.Neck, Neck),
 
-            //Debug.Log("update puppet");
-            RotateHumanoid(rotationData);
-            DrawJoints();
-            DrawBones();
+                new BoneRelation(JointType.SpineMid, JointType.SpineShoulder, SpineMid),
+                //new Tuple(JointType.SpineBase, JointType.SpineMid, SpineBase, false),
+
+                new BoneRelation(JointType.ShoulderRight, JointType.ElbowRight, ShoulderRight),
+                new BoneRelation(JointType.ElbowRight, JointType.WristRight, ElbowRight),
+                new BoneRelation(JointType.WristRight, JointType.HandRight, WristRight),
+
+                new BoneRelation(JointType.ShoulderLeft, JointType.ElbowLeft, ShoulderLeft),
+                new BoneRelation(JointType.ElbowLeft, JointType.WristLeft, ElbowLeft),
+                new BoneRelation(JointType.WristLeft, JointType.HandLeft, WristLeft),
+
+                new BoneRelation(JointType.SpineBase, JointType.HipLeft, SpineBase),
+                //new Tuple(JointType.HipLeft, JointType.KneeLeft, HipLeft, false),
+
+                new BoneRelation(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft),
+                new BoneRelation(JointType.AnkleLeft, JointType.FootLeft, FootLeft),
+
+                //new Tuple(JointType.SpineBase, JointType.HipRight, SpineBase, false),
+                //new Tuple(JointType.HipRight, JointType.KneeRight, HipLeft, false),
+
+                new BoneRelation(JointType.KneeRight, JointType.AnkleRight, KneeRight),
+                new BoneRelation(JointType.AnkleRight, JointType.FootRight, FootRight),
+            };
         }
 
+
+        #endregion
+
         #region Helpers
+
+        private void AttachToKinect()
+        {
+            Debug.Log("try attach to kinect server");
+            var kinectSerer = GetComponent<KinectBodyServer>();
+            if (kinectSerer == null)
+                return;
+
+            kinectSerer.RegisterReciever(this);
+            Debug.Log("reciever attached");
+        }
+
+        private void BindHumanoidJoint(JointType jointType, GameObject bindedObject, bool connected = true)
+        {
+            _humanoidJoints[jointType] = bindedObject;
+            _isConnected[jointType] = connected;
+        }
 
         private void CreateJoints()
         {
@@ -148,14 +195,17 @@ namespace Assets.Scripts
 
         private void CreateBones()
         {
-            foreach (var jointType in JointTypes.All)
+            foreach (var boneRelation in _boneRelations)
             {
                 var boneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 
                 boneObject.transform.parent = gameObject.transform;
-                boneObject.name = string.Format("Bone_{0}", jointType);
+                boneObject.name = string.Format("Bone_{0}_{1}", boneRelation.JointFrom, boneRelation.JointTo);
 
-                _bones[jointType] = boneObject;
+                if (!_bones.ContainsKey(boneRelation.JointFrom))
+                    _bones[boneRelation.JointFrom] = new Dictionary<JointType, GameObject>();
+
+                _bones[boneRelation.JointFrom][boneRelation.JointTo] = boneObject;
             }
         }
 
@@ -198,7 +248,7 @@ namespace Assets.Scripts
                     jointObject.SetActive(false);
                     continue;
                 }
-                
+
                 var humanoidPart = _humanoidJoints[jointType];
                 if (humanoidPart == null)
                 {
@@ -213,57 +263,26 @@ namespace Assets.Scripts
 
         private void DrawBones()
         {
-            Tuple[] pairs =
+            foreach (var boneRelation in _boneRelations)
             {
-                //new Tuple(JointType.Head, JointType.Neck, Head,false),
-                new Tuple(JointType.SpineShoulder, JointType.Neck, Neck, false),
-
-                new Tuple(JointType.SpineMid, JointType.SpineShoulder, SpineMid, false),
-                //new Tuple(JointType.SpineBase, JointType.SpineMid, SpineBase, false),
-
-                new Tuple(JointType.ShoulderRight, JointType.ElbowRight, ShoulderRight, false),
-                new Tuple(JointType.ElbowRight, JointType.WristRight, ElbowRight, false),
-                new Tuple(JointType.WristRight, JointType.HandRight, WristRight, false),
-
-                new Tuple(JointType.ShoulderLeft, JointType.ElbowLeft, ShoulderLeft, false),
-                new Tuple(JointType.ElbowLeft, JointType.WristLeft, ElbowLeft, false),
-                new Tuple(JointType.WristLeft, JointType.HandLeft, WristLeft, false),
-
-                new Tuple(JointType.SpineBase, JointType.HipLeft, SpineBase, false),
-                //new Tuple(JointType.HipLeft, JointType.KneeLeft, HipLeft, false),
-
-                new Tuple(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft, false),
-                new Tuple(JointType.AnkleLeft, JointType.FootLeft, FootLeft, true),
-
-                //new Tuple(JointType.SpineBase, JointType.HipRight, SpineBase, false),
-                //new Tuple(JointType.HipRight, JointType.KneeRight, HipLeft, false),
-
-                new Tuple(JointType.KneeRight, JointType.AnkleRight, KneeRight, false),
-                new Tuple(JointType.AnkleRight, JointType.FootRight, FootRight, true),
-            };
-
-            foreach (var tuple in pairs)
-            {
-                DrawBone(tuple.First, tuple.Second);
+                DrawBone(boneRelation);
             }
         }
 
-        private void DrawBone(JointType startJointType, JointType endJointType)
+        private void DrawBone(BoneRelation boneRelation)
         {
             const float boneWidthScale = 20;
 
-            if (
-                !_joints.ContainsKey(startJointType)
-                ||
-                !_joints.ContainsKey(endJointType)
-                ||
-                !_bones.ContainsKey(endJointType)
-            )
-            {
-                return;
-            }
+            var startJointType = boneRelation.JointFrom;
+            var endJointType = boneRelation.JointTo;
 
-            var boneObject = _bones[endJointType];
+            if (!_joints.ContainsKey(startJointType) || !_joints.ContainsKey(endJointType))
+                return;
+
+            if (!_bones.ContainsKey(startJointType) || !_bones[startJointType].ContainsKey(endJointType))
+                return;
+
+            var boneObject = _bones[startJointType][endJointType];
 
             var startJoint = _joints[startJointType];
             var endJoint = _joints[endJointType];
