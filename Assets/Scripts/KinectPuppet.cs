@@ -72,7 +72,7 @@ namespace Assets.Scripts
             CreateBones();
             CreateHumanoidJoints();
         }
-        
+
         public void UpdatePuppet(KinectData data)
         {
             var rotationData = data.RotationDataArray.FirstOrDefault(x => !x.IsEmpty);
@@ -130,9 +130,9 @@ namespace Assets.Scripts
             _boneRelations = new[]
             {
                 //new Tuple(JointType.Head, JointType.Neck, Head,false),
-                new BoneRelation(JointType.SpineShoulder, JointType.Neck, Neck),
+                new BoneRelation(JointType.SpineShoulder, JointType.Neck, Neck, widthScale:2.1f),
 
-                new BoneRelation(JointType.SpineMid, JointType.SpineShoulder, SpineMid),
+                new BoneRelation(JointType.SpineMid, JointType.SpineShoulder, SpineMid, widthScale:2.1f),
                 //new Tuple(JointType.SpineBase, JointType.SpineMid, SpineBase, false),
 
                 new BoneRelation(JointType.ShoulderRight, JointType.ElbowRight, ShoulderRight),
@@ -143,7 +143,7 @@ namespace Assets.Scripts
                 new BoneRelation(JointType.ElbowLeft, JointType.WristLeft, ElbowLeft),
                 new BoneRelation(JointType.WristLeft, JointType.HandLeft, WristLeft),
 
-                new BoneRelation(JointType.SpineBase, JointType.HipLeft, SpineBase),
+                //new BoneRelation(JointType.SpineBase, JointType.HipLeft, SpineBase),
                 //new Tuple(JointType.HipLeft, JointType.KneeLeft, HipLeft, false),
 
                 new BoneRelation(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft),
@@ -187,7 +187,7 @@ namespace Assets.Scripts
 
                 jointObject.transform.parent = gameObject.transform;
                 jointObject.name = string.Format("Joint_{0}", jointType);
-                jointObject.transform.localScale += new Vector3(20, 20, 20);
+                jointObject.transform.localScale += new Vector3(10, 10, 10);
 
                 _joints[jointType] = jointObject;
             }
@@ -271,7 +271,7 @@ namespace Assets.Scripts
 
         private void DrawBone(BoneRelation boneRelation)
         {
-            const float boneWidthScale = 20;
+            const float boneWidthScale = 10;
 
             var startJointType = boneRelation.JointFrom;
             var endJointType = boneRelation.JointTo;
@@ -294,7 +294,7 @@ namespace Assets.Scripts
             var endJointPos = endJoint.transform.position;
 
             var boneLength = Vector3.Distance(startJointPos, endJointPos);
-            boneObject.transform.localScale = new Vector3(boneWidthScale, boneLength / 2, boneWidthScale);
+            boneObject.transform.localScale = new Vector3(boneWidthScale * boneRelation.WidthScale, boneLength / 2, boneWidthScale * boneRelation.WidthScale);
 
             var boneVector = endJointPos - startJointPos;
             var rotationKinSys = Quaternion.FromToRotation(Vector3.up, boneVector);
