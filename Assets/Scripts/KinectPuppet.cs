@@ -9,6 +9,8 @@ namespace Assets.Scripts
 {
     public class KinectPuppet : MonoBehaviour, IKinectRotationDataReciever
     {
+        public bool ShowCollider;
+
         public GameObject Humanoid;
 
         public GameObject Head;
@@ -130,9 +132,9 @@ namespace Assets.Scripts
             _boneRelations = new[]
             {
                 //new Tuple(JointType.Head, JointType.Neck, Head,false),
-                new BoneRelation(JointType.SpineShoulder, JointType.Neck, Neck, widthScale:2.1f),
+                new BoneRelation(JointType.SpineShoulder, JointType.Neck, Neck, widthScale:4.1f),
 
-                new BoneRelation(JointType.SpineMid, JointType.SpineShoulder, SpineMid, widthScale:2.1f),
+                new BoneRelation(JointType.SpineMid, JointType.SpineShoulder, SpineMid, widthScale:4.1f),
                 //new Tuple(JointType.SpineBase, JointType.SpineMid, SpineBase, false),
 
                 new BoneRelation(JointType.ShoulderRight, JointType.ElbowRight, ShoulderRight),
@@ -146,14 +148,14 @@ namespace Assets.Scripts
                 //new BoneRelation(JointType.SpineBase, JointType.HipLeft, SpineBase),
                 //new Tuple(JointType.HipLeft, JointType.KneeLeft, HipLeft, false),
 
-                new BoneRelation(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft),
-                new BoneRelation(JointType.AnkleLeft, JointType.FootLeft, FootLeft),
+                new BoneRelation(JointType.KneeLeft, JointType.AnkleLeft, KneeLeft, widthScale:2.1f),
+                new BoneRelation(JointType.AnkleLeft, JointType.FootLeft, FootLeft, widthScale:2.1f),
 
                 //new Tuple(JointType.SpineBase, JointType.HipRight, SpineBase, false),
                 //new Tuple(JointType.HipRight, JointType.KneeRight, HipLeft, false),
 
-                new BoneRelation(JointType.KneeRight, JointType.AnkleRight, KneeRight),
-                new BoneRelation(JointType.AnkleRight, JointType.FootRight, FootRight),
+                new BoneRelation(JointType.KneeRight, JointType.AnkleRight, KneeRight, widthScale:2.1f),
+                new BoneRelation(JointType.AnkleRight, JointType.FootRight, FootRight, widthScale:2.1f),
             };
         }
 
@@ -181,13 +183,27 @@ namespace Assets.Scripts
 
         private void CreateJoints()
         {
+            const float jointRadius = 0.25f;
+            var defaultTranfrom = new Vector3(2 * jointRadius, 2 * jointRadius, 2 * jointRadius);
+
             foreach (JointType jointType in Enum.GetValues(typeof(JointType)))
             {
-                var jointObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                GameObject jointObject;
+
+                if (ShowCollider)
+                {
+                    jointObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    jointObject.transform.localScale = defaultTranfrom;
+                }
+                else
+                {
+                    jointObject = new GameObject();
+                    var sphereCollider = jointObject.AddComponent<SphereCollider>();
+                    sphereCollider.transform.localScale = defaultTranfrom;
+                }
 
                 jointObject.transform.parent = gameObject.transform;
                 jointObject.name = string.Format("Joint_{0}", jointType);
-                jointObject.transform.localScale += new Vector3(10, 10, 10);
 
                 _joints[jointType] = jointObject;
             }
@@ -197,7 +213,19 @@ namespace Assets.Scripts
         {
             foreach (var boneRelation in _boneRelations)
             {
-                var boneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                GameObject boneObject;
+
+                if (ShowCollider)
+                {
+                    boneObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                }
+                else
+                {
+                    boneObject = new GameObject();
+                    var sphereCollider = boneObject.AddComponent<CapsuleCollider>();
+                    //sphereCollider.transform.localScale = defaultTranfrom;
+                }
+
 
                 boneObject.transform.parent = gameObject.transform;
                 boneObject.name = string.Format("Bone_{0}_{1}", boneRelation.JointFrom, boneRelation.JointTo);
@@ -294,7 +322,19 @@ namespace Assets.Scripts
             var endJointPos = endJoint.transform.position;
 
             var boneLength = Vector3.Distance(startJointPos, endJointPos);
-            boneObject.transform.localScale = new Vector3(boneWidthScale * boneRelation.WidthScale, boneLength / 2, boneWidthScale * boneRelation.WidthScale);
+            const int k = 20;
+
+            if (ShowCollider)
+            {
+                boneObject.transform.localScale = new Vector3(boneWidthScale * boneRelation.WidthScale,
+                    k * boneLength / 2, boneWidthScale * boneRelation.WidthScale);
+            }
+            else
+            {
+                var col = boneObject.GetComponent<CapsuleCollider>();
+                col.radius = boneWidthScale * boneRelation.WidthScale / (4 * k);
+                col.height = boneLength;
+            }
 
             var boneVector = endJointPos - startJointPos;
             var rotationKinSys = Quaternion.FromToRotation(Vector3.up, boneVector);
