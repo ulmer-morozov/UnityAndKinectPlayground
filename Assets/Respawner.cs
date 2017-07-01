@@ -21,7 +21,10 @@ namespace Assets
         public void Awake()
         {
             _presets.Add(new FillerPreset("Ball", 1000, 0.4f, 0.2f));
-            _presets.Add(new FillerPreset("Skull", 50, 0.2f, 1.1f));
+            _presets.Add(new FillerPreset("Skull", 50, 0.2f, 2f));
+            _presets.Add(new FillerPreset("CatFood", 200, 1f, 3.1f));
+            _presets.Add(new FillerPreset("Donut", 200, 0.2f, 1.1f));
+            _presets.Add(new FillerPreset("Dollar", 400, 1f, 1.1f));
         }
 
         public void Start()
@@ -29,7 +32,7 @@ namespace Assets
             if (!_presets.Any())
                 return;
 
-            SetPreset(0);
+            SetPreset(CurrentPreset);
         }
 
         private void SetPreset(FillerPreset preset)
